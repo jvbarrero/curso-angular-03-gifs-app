@@ -16,20 +16,19 @@ const loadFromLocalStorage = () => {
 
 
 
-
 @Injectable({providedIn: 'root'})
 export class GifService {
   private readonly http = inject(HttpClient);
 
   trendingGifs = signal<Gif[]>([]);
-  trendingGifsLoading = signal(true);
+  trendingGifsLoading = signal(false);
+  private trendingPage = signal(0);
 
   trendingGrigGroup = computed<Gif[][]>(() => {
     const groups = [];
     for (let i = 0; i < this.trendingGifs().length; i +=3 ) {
       groups.push(this.trendingGifs().slice(i, i+3));
     }
-    console.log(groups);
     return groups;
   });
 
@@ -45,17 +44,21 @@ export class GifService {
   }
 
   loadTrendingGifs(){
+    if (this.trendingGifsLoading()) return;
+
+    this.trendingGifsLoading.set(true);
+
     this.http.get<GiphyResponse>(`${environment.giphyUrl}/gifs/trending`,{
       params: {
         api_key: environment.giphyApiKEy,
         limit: 20,
-        offset: 0
+        offset: this.trendingPage() * 20,
       }
     }).subscribe((resp) => {
       const gifs = GifMapper.mapGiphyItemsToGifArray(resp.data);
-      this.trendingGifs.set(gifs);
+      this.trendingGifs.update(gurrentGifs => [...gurrentGifs, ...gifs])
       this.trendingGifsLoading.set(false);
-      console.log({gifs});
+      this.trendingPage.update(value => value+1);
     });
   }
 
